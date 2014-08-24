@@ -1,0 +1,1 @@
+set "CATALINA_OPTS=%CATALINA_OPTS% -javaagent:C:\Users\alecsicus\workspaceluna\HelloWorld1\build\instrumentation.jar"

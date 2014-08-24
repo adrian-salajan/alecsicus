@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Built-By: Cycle
+Build-Jdk: 1.7.0_01
+Premain-Class: com.yell.instrumentation.DurationAgent
+Created-By: alex
