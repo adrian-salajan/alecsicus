@@ -13,7 +13,4 @@ public @interface YellRegexPattern {
 
 	String regexPattern();
 
-	int times() default 1;
-
-	int seconds() default -1;
 }

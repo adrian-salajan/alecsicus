@@ -1,0 +1,1 @@
+java -cp .;./lib/javassist-3.14.0-GA.jar -javaagent:C:/Users/alecsicus/workspaceluna/WhatWentWrong/bin/instrumentation.jar com.yell.test.TestAnnotations

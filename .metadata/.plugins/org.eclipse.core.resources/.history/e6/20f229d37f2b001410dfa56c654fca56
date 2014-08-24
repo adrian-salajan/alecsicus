@@ -1,0 +1,13 @@
+package com.yell.test;
+
+import com.yell.annotation.Yell;
+import com.yell.annotation.YellChar;
+
+@Yell
+public class Lion {
+
+	@YellChar(message = "A lion can not have c years!!!", result = 'c')
+	public char getLionAge() {
+		return 'c';
+	}
+}

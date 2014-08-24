@@ -11,7 +11,7 @@ public @interface YellChar {
 	
 	String message() default "Error char";
 
-	char value();
+	char result();
 	
 	int times() default 1;
 	

@@ -13,5 +13,5 @@ public @interface YellCustom {
 
 	String element();
 	
-	String value();
+	String result();
 }
