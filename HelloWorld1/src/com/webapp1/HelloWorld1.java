@@ -8,6 +8,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.yell.webservice.Service;
+
 /**
  * Servlet implementation class HelloWorld
  */
@@ -44,6 +46,7 @@ public class HelloWorld1 extends HttpServlet {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+	      System.out.println(Service.getInstance().yellMessageList.peek());
 	  }
 	  
 	  public void destroy()

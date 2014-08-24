@@ -135,7 +135,7 @@ public class DurationTransformer implements ClassFileTransformer {
 						newMethod.setBody( " { int result =  this." + m.getName()+ "();"
 								+ "if (result == " + yellInt.result() + ") {"
 								+ "System.out.println(\"intercepted result is: \" + result);\n"
-								+ "if (linkedList.size() == "+ (yellInt.times()- 1) +") {"
+								+ "if (queueIntTimes.size() == "+ (yellInt.times()- 1) +") {"
 								+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+yellInt.message()+"\",\""+ cc.getName() +"\",\""+ name +"\");\n"
 								+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
 								+ "for (int i = 0; i < "+(yellInt.times()- 1)+"; i++) {"

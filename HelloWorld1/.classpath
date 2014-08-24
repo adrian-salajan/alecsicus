@@ -4,12 +4,8 @@
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
 	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="C:/glassfish3/glassfish/lib/appserv-rt.jar"/>
-	<classpathentry kind="lib" path="C:/glassfish3/glassfish/lib/gf-client.jar"/>
-	<classpathentry kind="lib" path="C:/glassfish3/glassfish/lib/javaee.jar"/>
-	<classpathentry kind="lib" path="C:/glassfish3/glassfish/lib/javahelp.jar"/>
-	<classpathentry kind="lib" path="C:/glassfish3/glassfish/lib/jndi-properties.jar"/>
-	<classpathentry kind="lib" path="C:/glassfish3/glassfish/lib/upgrade-tool.jar"/>
 	<classpathentry kind="lib" path="build/javassist-3.14.0-GA.jar"/>
+	<classpathentry kind="lib" path="/WhatWentWrong/lib/servlet-api.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/WhatWentWrong"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
