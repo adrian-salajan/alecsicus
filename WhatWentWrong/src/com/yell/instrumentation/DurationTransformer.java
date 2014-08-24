@@ -21,6 +21,7 @@ import com.yell.annotation.YellChar;
 import com.yell.annotation.YellInt;
 import com.yell.annotation.YellIntArray;
 import com.yell.annotation.YellString;
+import com.yell.annotation.YellStringArray;
 
 //this class will be registered with instrumentation agent
 public class DurationTransformer implements ClassFileTransformer {
@@ -62,16 +63,6 @@ public class DurationTransformer implements ClassFileTransformer {
 		return containsYellClassAnnotations;
 	}
 
-	private YellString containsYellString(CtMethod method,
-			Class<YellString> class1) {
-		Object[] availableAnnotations = method.getAvailableAnnotations();
-		for (Object annotation : availableAnnotations) {
-			if (annotation instanceof YellString) {
-				return (YellString) annotation;
-			}
-		}
-		return null;
-	}
 
 	private void updateWithAlert(CtClass ctClass, CtMethod method) {
 		Object[] availableAnnotations = method.getAvailableAnnotations();
@@ -88,9 +79,9 @@ public class DurationTransformer implements ClassFileTransformer {
 				updateWithRegexPatternAlerter(ctClass, method,(YellRegexPattern) annotation);
 			} */ else if (annotation instanceof YellString){
 				updateWithStringAlerter(ctClass, method,(YellString) annotation);
-			} /*else if (annotation instanceof YellStringArray){
+			} else if (annotation instanceof YellStringArray){
 				updateWithStringArrayAlerter(ctClass, method,(YellStringArray) annotation);
-			} else if (annotation instanceof YellThrowsCheckedException){
+			} /*else if (annotation instanceof YellThrowsCheckedException){
 				updateWithIntAlerter(ctClass, method,(YellThrowsCheckedException) annotation);
 			} else if (annotation instanceof YellThrowsUncheckedException){
 				updateWithThrowsUncheckedExceptionAlerter(ctClass, method,(YellThrowsUncheckedException) annotation);
@@ -190,28 +181,10 @@ public class DurationTransformer implements ClassFileTransformer {
 	private void updateWithIntArrayAlerter(CtClass ctClass, CtMethod method, YellIntArray annotation) {
 		try {
 			if (method.getReturnType().getName() == int.class.getName()) {
-				String name = method.getName();
-				makeMethodPrivate(method);
-
-				CtMethod newMethod = new CtMethod(method.getReturnType(), name, method.getParameterTypes(), ctClass);
-				newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
 
 				String resultListF = Arrays.toString(annotation.result());
-				String resultList = resultListF.substring(1, resultListF.length()-1);
-
-				newMethod.setBody( " { int result =  this." + method.getName()+ "();\n"
-						+ "int[] resultListAnnotation = new int[]{" +resultList+"};"
-						+ "boolean found = false;"
-						+ "for (int i = 0; i< resultListAnnotation.length ; i++) {\n"
-						+ "found |= resultListAnnotation[i] == result;}"
-						+ "if (found) {"
-						+ "System.out.println(\"intercepted result char is: \" + result);\n"
-						+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
-						+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
-						+ "} " 
-						+ " return result; } ");
-				ctClass.addMethod(newMethod);
-
+				String result = resultListF.substring(1, resultListF.length() - 1);
+				updateWithArrayAlerter(ctClass, method, annotation.message(), result, int.class.getName());
 			}
 		} catch (CannotCompileException e) {
 			// TODO Auto-generated catch block
@@ -220,7 +193,50 @@ public class DurationTransformer implements ClassFileTransformer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
 
+	private void updateWithStringArrayAlerter(CtClass ctClass, CtMethod method, YellStringArray annotation) {
+		System.out.println(" updateWithStringArrayAlerter -->");
+		try {
+			if (method.getReturnType().getName().equals(String.class.getName())) {
+				
+				String result = new String();
+				for (int i = 0; i < annotation.result().length; i++){
+					result += "\""+annotation.result()[i]+"\", ";
+				}
+				result = result.substring(0, result.length() - 2);
+				System.out.println(result);
+				updateWithArrayAlerter(ctClass, method, annotation.message(), result, String.class.getName());
+			}
+		} catch (CannotCompileException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void updateWithArrayAlerter(CtClass ctClass, CtMethod method, String message, String result, String type) throws CannotCompileException, NotFoundException {
+		System.out.println(" updateWithArrayAlerter -->");
+		String name = method.getName();
+		makeMethodPrivate(method);
+
+		CtMethod newMethod = new CtMethod(method.getReturnType(), name, method.getParameterTypes(), ctClass);
+		newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
+
+		newMethod.setBody( " { "+type+" result =  this." + method.getName()+ "();\n"
+				+ type+"[] resultListAnnotation = new "+type+"[]{" +result+"};"
+				+ "boolean found = false;"
+				+ "for (int i = 0; i< resultListAnnotation.length ; i++) {\n"
+				+ "found |= resultListAnnotation[i] == result;}"
+				+ "if (found) {"
+				+ "System.out.println(\"intercepted result  is: \" + result);\n"
+				+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+				+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+				+ "} " 
+				+ " return result; } ");
+		ctClass.addMethod(newMethod);		
 	}
 	
 	private void makeMethodPrivate(CtMethod m) {
