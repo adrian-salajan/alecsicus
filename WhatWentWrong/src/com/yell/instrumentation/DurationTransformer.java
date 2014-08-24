@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
+import java.util.Arrays;
 
 import javassist.CannotCompileException;
 import javassist.ClassClassPath;
@@ -18,6 +19,7 @@ import javassist.bytecode.AccessFlag;
 import com.yell.annotation.Yell;
 import com.yell.annotation.YellChar;
 import com.yell.annotation.YellInt;
+import com.yell.annotation.YellIntArray;
 import com.yell.annotation.YellString;
 
 //this class will be registered with instrumentation agent
@@ -80,9 +82,9 @@ public class DurationTransformer implements ClassFileTransformer {
 				updateWithCustomAlerter(ctClass, method,(YellCustom) annotation);
 			} */else if (annotation instanceof YellInt){
 				updateWithIntAlerter(ctClass, method,(YellInt) annotation);
-			} /*else if (annotation instanceof YellIntArray){
+			} else if (annotation instanceof YellIntArray){
 				updateWithIntArrayAlerter(ctClass, method,(YellIntArray) annotation);
-			} else if (annotation instanceof YellRegexPattern){
+			} /*else if (annotation instanceof YellRegexPattern){
 				updateWithRegexPatternAlerter(ctClass, method,(YellRegexPattern) annotation);
 			} */ else if (annotation instanceof YellString){
 				updateWithStringAlerter(ctClass, method,(YellString) annotation);
@@ -96,13 +98,11 @@ public class DurationTransformer implements ClassFileTransformer {
 		}
 		
 	}
-	
+
 	private void updateWithIntAlerter(CtClass cc, CtMethod m, YellInt yellInt) {
 		try {
 			if (m.getReturnType().getName() == int.class.getName()) {
-				updateWithPrimitiveAlerter(cc, m, yellInt.times(),
-						yellInt.message(), "" + yellInt.result(),
-						int.class.getName());
+				updateWithPrimitiveAlerter(cc, m, yellInt.times(), yellInt.message(), "" + yellInt.result(), int.class.getName());
 			}
 		} catch (NotFoundException e) {
 			// TODO Auto-generated catch block
@@ -113,14 +113,11 @@ public class DurationTransformer implements ClassFileTransformer {
 		}
 	}
 
-	private void updateWithStringAlerter(CtClass cc, CtMethod m,
-			YellString yellString) {
+	private void updateWithStringAlerter(CtClass cc, CtMethod m, YellString yellString) {
 
 		try {
 			if (m.getReturnType().getName() == char.class.getName()) {
-				updateWithPrimitiveAlerter(cc, m, yellString.times(),
-						yellString.message(), yellString.result(),
-						String.class.getName());
+				updateWithPrimitiveAlerter(cc, m, yellString.times(), yellString.message(), yellString.result(), String.class.getName());
 			}
 		} catch (NotFoundException e) {
 			// TODO Auto-generated catch block
@@ -135,9 +132,7 @@ public class DurationTransformer implements ClassFileTransformer {
 
 		try {
 			if (m.getReturnType().getName() == char.class.getName()) {
-				updateWithPrimitiveAlerter(cc, m, yellChar.times(),
-						yellChar.message(), "'" + yellChar.result() + "'",
-						char.class.getName());
+				updateWithPrimitiveAlerter(cc, m, yellChar.times(), yellChar.message(), "'" + yellChar.result() + "'", char.class.getName());
 			}
 		} catch (NotFoundException e) {
 			// TODO Auto-generated catch block
@@ -147,7 +142,6 @@ public class DurationTransformer implements ClassFileTransformer {
 			e.printStackTrace();
 		}
 	}
-	
 	
 	private void updateWithPrimitiveAlerter(CtClass cc, CtMethod m, int times, String message, String result, String type) throws CannotCompileException, NotFoundException {
 
@@ -193,6 +187,42 @@ public class DurationTransformer implements ClassFileTransformer {
 		
 	}
 
+	private void updateWithIntArrayAlerter(CtClass ctClass, CtMethod method, YellIntArray annotation) {
+		try {
+			if (method.getReturnType().getName() == int.class.getName()) {
+				String name = method.getName();
+				makeMethodPrivate(method);
+
+				CtMethod newMethod = new CtMethod(method.getReturnType(), name, method.getParameterTypes(), ctClass);
+				newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
+
+				String resultListF = Arrays.toString(annotation.result());
+				String resultList = resultListF.substring(1, resultListF.length()-1);
+
+				newMethod.setBody( " { int result =  this." + method.getName()+ "();\n"
+						+ "int[] resultListAnnotation = new int[]{" +resultList+"};"
+						+ "boolean found = false;"
+						+ "for (int i = 0; i< resultListAnnotation.length ; i++) {\n"
+						+ "found |= resultListAnnotation[i] == result;}"
+						+ "if (found) {"
+						+ "System.out.println(\"intercepted result char is: \" + result);\n"
+						+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+						+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+						+ "} " 
+						+ " return result; } ");
+				ctClass.addMethod(newMethod);
+
+			}
+		} catch (CannotCompileException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+	
 	private void makeMethodPrivate(CtMethod m) {
 		if (AccessFlag.isPublic(m.getModifiers())) {
 			m.setName(m.getName() + "Wrapped");
