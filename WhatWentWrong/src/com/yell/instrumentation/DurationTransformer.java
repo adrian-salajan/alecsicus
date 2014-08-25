@@ -18,8 +18,10 @@ import javassist.bytecode.AccessFlag;
 
 import com.yell.annotation.Yell;
 import com.yell.annotation.YellChar;
+import com.yell.annotation.YellCustom;
 import com.yell.annotation.YellInt;
 import com.yell.annotation.YellIntArray;
+import com.yell.annotation.YellRegexPattern;
 import com.yell.annotation.YellString;
 import com.yell.annotation.YellStringArray;
 
@@ -69,15 +71,15 @@ public class DurationTransformer implements ClassFileTransformer {
 		for (Object annotation : availableAnnotations) {
 			if (annotation instanceof YellChar) {
 				updateWithCharAlerter(ctClass, method,(YellChar) annotation);
-			}/* else if (annotation instanceof YellCustom){
+			} else if (annotation instanceof YellCustom){
 				updateWithCustomAlerter(ctClass, method,(YellCustom) annotation);
-			} */else if (annotation instanceof YellInt){
+			} else if (annotation instanceof YellInt){
 				updateWithIntAlerter(ctClass, method,(YellInt) annotation);
 			} else if (annotation instanceof YellIntArray){
 				updateWithIntArrayAlerter(ctClass, method,(YellIntArray) annotation);
-			} /*else if (annotation instanceof YellRegexPattern){
+			} else if (annotation instanceof YellRegexPattern){
 				updateWithRegexPatternAlerter(ctClass, method,(YellRegexPattern) annotation);
-			} */ else if (annotation instanceof YellString){
+			}  else if (annotation instanceof YellString){
 				updateWithStringAlerter(ctClass, method,(YellString) annotation);
 			} else if (annotation instanceof YellStringArray){
 				updateWithStringArrayAlerter(ctClass, method,(YellStringArray) annotation);
@@ -218,7 +220,6 @@ public class DurationTransformer implements ClassFileTransformer {
 	}
 	
 	private void updateWithArrayAlerter(CtClass ctClass, CtMethod method, String message, String result, String type) throws CannotCompileException, NotFoundException {
-		System.out.println(" updateWithArrayAlerter -->");
 		String name = method.getName();
 		makeMethodPrivate(method);
 
@@ -237,6 +238,102 @@ public class DurationTransformer implements ClassFileTransformer {
 				+ "} " 
 				+ " return result; } ");
 		ctClass.addMethod(newMethod);		
+	}
+	
+
+	private void updateWithRegexPatternAlerter(CtClass ctClass, CtMethod method, YellRegexPattern annotation) {
+		try{
+			String name = method.getName();
+			makeMethodPrivate(method);
+
+			CtMethod newMethod = new CtMethod(method.getReturnType(), name, method.getParameterTypes(), ctClass);
+			newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
+
+			newMethod.setBody( " { "+ method.getReturnType().getName()+ " result =  this." + method.getName()+ "();\n"
+					+ "if (result.matches(\""+annotation.regexPattern()+"\")) {"
+					+ "System.out.println(\"intercepted result char is: \" + result);\n"
+					+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+					+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+					+ "} " 
+					+ " return result; } ");
+			ctClass.addMethod(newMethod);
+		
+		} catch (CannotCompileException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void updateWithCustomAlerter(CtClass ctClass, CtMethod method, YellCustom annotation) {
+			
+		CtClass returnTypeClass = null;
+		try {
+			returnTypeClass = method.getReturnType();
+		} catch (NotFoundException e) {
+			e.printStackTrace();
+		}
+		
+		if (returnTypeClass != null) {
+			if (!annotation.element().isEmpty()) {
+				String[] path = annotation.element().split("\\.");
+
+				boolean allAtribFound = true;
+				for (String variable : path) {
+					CtField ctField = null;
+					try {
+						ctField = returnTypeClass.getDeclaredField(variable);
+					} catch (NotFoundException e) {
+						e.printStackTrace();
+						allAtribFound = false;
+					}
+
+					if (ctField != null) {
+						try {
+							returnTypeClass = ctField.getType();
+						} catch (NotFoundException e) {
+							e.printStackTrace();
+							allAtribFound = false;
+						}
+					}
+				}
+				
+				if (allAtribFound){
+					String name = method.getName();
+					makeMethodPrivate(method);
+					try {
+					CtMethod newMethod = new CtMethod(method.getReturnType(), name, method.getParameterTypes(), ctClass);
+					newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
+
+					newMethod.setBody( 
+							" { "+ method.getReturnType().getName()+ " result =  this." + method.getName()+ "();\n"
+							+ "String[] path = \""+annotation.element()+"\".split(\"\\\\.\");"
+							+ "Class clazz = "+method.getReturnType().getName()+".class;"
+							+ "Object value = result;"
+							+ "boolean finishedCorrectly=true;"
+							+ "try{ for (int i = 0; i < path.length; i++) {"
+							+ "  String var = path[i];"
+							+ "  java.lang.reflect.Field field = clazz.getDeclaredField(var);"
+							+ "  field.setAccessible(true);"
+							+ "  value = field.get(value);"
+							+ "  clazz = field.getType(); }"
+							+ "} catch (Exception e) { e.printStackTrace(); finishedCorrectly = false;}"
+							+ "if (finishedCorrectly && value.equals(\""+annotation.result()+"\")){"
+							+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+					        + "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+							+ "}"
+							+ " return result; } ");
+							
+						ctClass.addMethod(newMethod);
+						} catch (CannotCompileException | NotFoundException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+			}
+		}
 	}
 	
 	private void makeMethodPrivate(CtMethod m) {
