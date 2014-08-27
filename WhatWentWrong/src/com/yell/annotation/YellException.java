@@ -7,13 +7,10 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface YellThrowsException {
-
-	String message();
-
-	Class<? extends Throwable> expected() default None.class;
-
-	static class None extends Throwable {
-	}
+public @interface YellException {
 	
+	String message() default "Exception ";
+	
+	Class<? extends Throwable> throwable();
+
 }
