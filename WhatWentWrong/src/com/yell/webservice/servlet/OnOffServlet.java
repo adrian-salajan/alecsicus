@@ -11,9 +11,12 @@ import javax.servlet.http.HttpServletResponse;
 import com.yell.webservice.Service;
 import com.yell.webservice.YellMessage;
 
-public class JsonServlet  extends HttpServlet {
+public class OnOffServlet extends HttpServlet {
 
 	private Service service = Service.getInstance();
+	
+	
+	
 	@Override
 	protected void service(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
@@ -24,12 +27,29 @@ public class JsonServlet  extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
 		
+		String yell = req.getParameter("yell");
+		if (yell != null) {
+			Service.getInstance().setRun(Boolean.valueOf(yell));
+		}
+		resp.setContentType("text/html");
+		
 		PrintWriter writer = resp.getWriter();
 		try {
-			if (!service.getMessages().isEmpty()) {
-				YellMessage poll = service.getMessages().poll();
-				writer.append(poll.getMessage());
-			}
+				writer.append("<!DOCTYPE html>");
+				writer.append("<html><body>");
+				
+				writer.append("Yell service is now: " + (Service.getInstance().isRun() ? "ON." : "OFF."));
+				
+				writer.append("<br/> You can turn it ");
+				
+				String base = req.getScheme() + "://" + req.getServerName() + ":" + req.getServerPort() + req.getContextPath() + "/YellStatus?";
+				String onLink = "<a href=\"" + base + "yell=true\">ON</a>" ;
+				String offLink ="<a href=\"" + base + "yell=false\">OFF</a>" ;
+				
+				writer.append(onLink + " or " + offLink + ".");
+				
+				writer.append("</body></html>");
+				
 		} catch (Exception e) {
 			System.err.println(e);
 			writer.append(e.getMessage());
@@ -39,5 +59,6 @@ public class JsonServlet  extends HttpServlet {
 			
 		
 	}
-
+	
+	
 }

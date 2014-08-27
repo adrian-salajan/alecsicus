@@ -8,13 +8,22 @@ public class TestAnnotations {
 
 	public static void main(String[] args) {
 		Lion l = new Lion();
-		System.out.println(l.getLionAge(-3));
+		System.out.println(l.getLionAge(-1));
+		System.out.println("MyAlert: " + Service.getInstance().getMessages().poll().getMessage());
+		
+		Service.getInstance().setRun(false);
+		
+		System.out.println(l.getLionAge(-1));
+		System.out.println("MyAlert: " + Service.getInstance().getMessages().poll());
+		
+		
+		
+		
 //		System.out.println(l.getLionAge());
 //		System.out.println(l.getLionAge());
 //		System.out.println(l.getLionAge());
 //		System.out.println(l.getLionAge());
 		
-		//System.out.println("MyAlert: " + Service.yellMessageList.poll().getMessage());
 		try {
 			l.throwCheckedException();
 		} catch (Exception e) {
@@ -37,10 +46,10 @@ public class TestAnnotations {
 		
 		
 
-		System.out.println("MyAlert: " + Service.yellMessageList.poll().getMessage());
-		System.out.println("MyAlert: " + Service.yellMessageList.poll().getMessage());
-		System.out.println("MyAlert: " + Service.yellMessageList.poll().getMessage());
-		System.out.println("MyAlert: " + Service.yellMessageList.poll().getMessage());
+		System.out.println("MyAlert: " + Service.getInstance().getMessages().poll());
+		System.out.println("MyAlert: " + Service.getInstance().getMessages().poll());
+		System.out.println("MyAlert: " + Service.getInstance().getMessages().poll());
+		System.out.println("MyAlert: " + Service.getInstance().getMessages().poll());
 
 	}
 

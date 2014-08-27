@@ -21,10 +21,18 @@ http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
 		<servlet-name>JsonServlet</servlet-name>
 		<servlet-class>com.yell.webservice.servlet.JsonServlet</servlet-class>
 	</servlet>
-
 	<servlet-mapping>
 		<servlet-name>JsonServlet</servlet-name>
 		<url-pattern>/alert</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>YellStatus</servlet-name>
+		<servlet-class>com.yell.webservice.servlet.OnOffServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>YellStatus</servlet-name>
+		<url-pattern>/YellStatus</url-pattern>
 	</servlet-mapping>
 	
 	

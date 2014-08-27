@@ -47,7 +47,7 @@ public class HelloWorld1 extends HttpServlet {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	      System.out.println(Service.getInstance().yellMessageList.peek());
+	      System.out.println(Service.getInstance().getMessages().peek());
 	  }
 	  
 	  public void destroy()

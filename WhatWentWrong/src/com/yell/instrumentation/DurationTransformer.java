@@ -108,11 +108,13 @@ public class DurationTransformer implements ClassFileTransformer {
 			newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
 			
 			newMethod.setBody("{ " 
+			+  "if (!com.yell.webservice.Service.getInstance().isRun())" 
+					+ ("void".equals(returnType) ? method.getName() : ("return " + method.getName())) + "();"
 			+ "try {"
 			+ ("void".equals(returnType) ? method.getName() : ("return " + method.getName())) + "();"
 			+ "} catch (" + annotation.throwable().getCanonicalName() +" ex) {"
 			+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() + " with message:\"  + ex.getMessage()" + " ,\""+ ctClass.getName() +"\",\""+ name +"\");\n"
-			+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+			+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 			+ "throw ex;"
 			+ "}"
 			+ "}");
@@ -185,10 +187,11 @@ public class DurationTransformer implements ClassFileTransformer {
 				if (times == 1) {
 					
 					newMethod.setBody( " { " + type + " result =  this." + callWrappedMethod(m) 
+							+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
 							+ "if (result == " + result + ") {"
 							+ "System.out.println(\"intercepted result char is: \" + result);\n"
 							+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message +"\",\""+ cc.getName() +"\",\""+ name +"\");\n"
-							+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+							+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 							+ "} " 
 							+ " return result; } ");
 						
@@ -197,11 +200,12 @@ public class DurationTransformer implements ClassFileTransformer {
 						createQueue(cc, queueName);
 				
 						newMethod.setBody( " { " + type + " result =  this." + callWrappedMethod(m)
+								+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
 								+ "if (result == " + result + ") {"
 								+ "System.out.println(\"intercepted result char is: \" + result);\n"
 								+ "if (queueCharTimes.size() == "+ (times- 1) +") {"
 								+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message+"\",\""+ cc.getName() +"\",\""+ name +"\");\n"
-								+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+								+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 								+ "for (int i = 0; i < "+(times- 1)+"; i++) {"
 								+ "queueCharTimes.poll();"
 								+ "}"	
@@ -216,6 +220,7 @@ public class DurationTransformer implements ClassFileTransformer {
 			
 		
 	}
+
 
 	private String callWrappedMethod(CtMethod m) {
 		return m.getName() + "($$);";
@@ -268,6 +273,7 @@ public class DurationTransformer implements ClassFileTransformer {
 		newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
 
 		newMethod.setBody( " { "+type+" result =  this." + callWrappedMethod(method)
+				+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
 				+ type+"[] resultListAnnotation = new "+type+"[]{" +result+"};"
 				+ "boolean found = false;"
 				+ "for (int i = 0; i< resultListAnnotation.length ; i++) {\n"
@@ -275,7 +281,7 @@ public class DurationTransformer implements ClassFileTransformer {
 				+ "if (found) {"
 				+ "System.out.println(\"intercepted result  is: \" + result);\n"
 				+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
-				+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+				+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 				+ "} " 
 				+ " return result; } ");
 		ctClass.addMethod(newMethod);		
@@ -291,10 +297,11 @@ public class DurationTransformer implements ClassFileTransformer {
 			newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
 
 			newMethod.setBody( " { "+ method.getReturnType().getName()+ " result =  this." + callWrappedMethod(method)
+					+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
 					+ "if (result.matches(\""+annotation.regexPattern()+"\")) {"
 					+ "System.out.println(\"intercepted result char is: \" + result);\n"
 					+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
-					+ "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+					+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 					+ "} " 
 					+ " return result; } ");
 			ctClass.addMethod(newMethod);
@@ -350,6 +357,7 @@ public class DurationTransformer implements ClassFileTransformer {
 
 					newMethod.setBody( 
 							" { "+ method.getReturnType().getName()+ " result =  this." + callWrappedMethod(method)
+							+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
 							+ "String[] path = \""+annotation.element()+"\".split(\"\\\\.\");"
 							+ "Class clazz = "+method.getReturnType().getName()+".class;"
 							+ "Object value = result;"
@@ -363,7 +371,7 @@ public class DurationTransformer implements ClassFileTransformer {
 							+ "} catch (Exception e) { e.printStackTrace(); finishedCorrectly = false;}"
 							+ "if (finishedCorrectly && value.equals(\""+annotation.result()+"\")){"
 							+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
-					        + "com.yell.webservice.Service.yellMessageList.add(yellMessage);\n" 
+					        + "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 							+ "}"
 							+ " return result; } ");
 							
