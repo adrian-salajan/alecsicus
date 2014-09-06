@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee 
+http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+
+	<servlet>
+		<servlet-name>TestApp</servlet-name>
+		<servlet-class>com.yell.HelloWorld</servlet-class>
+	</servlet>
+	<servlet>
+		<description>
+		</description>
+		<display-name>JsonServlet</display-name>
+		<servlet-name>JsonServlet</servlet-name>
+		<servlet-class>com.yell.webservice.servlet.JsonServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<description>
+		</description>
+		<display-name>OnOffServlet</display-name>
+		<servlet-name>OnOffServlet</servlet-name>
+		<servlet-class>com.yell.webservice.servlet.OnOffServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+	    <servlet-name>TestApp</servlet-name>
+		<url-pattern>/HelloWorld</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>JsonServlet</servlet-name>
+		<url-pattern>/alert</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>OnOffServlet</servlet-name>
+		<url-pattern>/YellStatus</url-pattern>
+	</servlet-mapping>
+
+	
+</web-app>
