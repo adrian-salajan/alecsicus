@@ -12,5 +12,8 @@ public @interface YellRegexPattern {
 	String message();
 
 	String regexPattern();
+	
+	boolean matches() default true;
 
+	Priority priority() default Priority.MEDIUM;
 }

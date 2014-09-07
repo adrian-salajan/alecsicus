@@ -16,6 +16,7 @@ import javassist.Modifier;
 import javassist.NotFoundException;
 import javassist.bytecode.AccessFlag;
 
+import com.yell.annotation.Priority;
 import com.yell.annotation.Yell;
 import com.yell.annotation.YellChar;
 import com.yell.annotation.YellCustom;
@@ -28,16 +29,14 @@ import com.yell.annotation.YellStringArray;
 
 //this class will be registered with instrumentation agent
 public class DurationTransformer implements ClassFileTransformer {
-	public byte[] transform(ClassLoader loader, String className,
-			Class classBeingRedefined, ProtectionDomain protectionDomain,
+	public byte[] transform(ClassLoader loader, String className, Class classBeingRedefined, ProtectionDomain protectionDomain,
 			byte[] classfileBuffer) throws IllegalClassFormatException {
 		byte[] byteCode = classfileBuffer;
 
 		try {
 			ClassPool classPool = ClassPool.getDefault();
 			classPool.insertClassPath(new ClassClassPath(this.getClass()));
-			CtClass ctClass = classPool.makeClass(new ByteArrayInputStream(
-					classfileBuffer));
+			CtClass ctClass = classPool.makeClass(new ByteArrayInputStream(classfileBuffer));
 			if (containsYellClassAnnotations(ctClass)) {
 				CtMethod[] methods = ctClass.getDeclaredMethods();
 				for (CtMethod method : methods) {
@@ -86,11 +85,7 @@ public class DurationTransformer implements ClassFileTransformer {
 				updateWithStringArrayAlerter(ctClass, method,(YellStringArray) annotation);
 			} else if (annotation instanceof YellException){
 				updateWithExceptionAlerter(ctClass, method,(YellException) annotation);
-			}/*else if (annotation instanceof YellThrowsCheckedException){
-				updateWithIntAlerter(ctClass, method,(YellThrowsCheckedException) annotation);
-			} else if (annotation instanceof YellThrowsUncheckedException){
-				updateWithThrowsUncheckedExceptionAlerter(ctClass, method,(YellThrowsUncheckedException) annotation);
-			}*/
+			}
 		}
 		
 	}
@@ -113,7 +108,7 @@ public class DurationTransformer implements ClassFileTransformer {
 			+ "try {"
 			+ ("void".equals(returnType) ? method.getName() : ("return " + method.getName())) + "();"
 			+ "} catch (" + annotation.throwable().getCanonicalName() +" ex) {"
-			+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() + " with message:\"  + ex.getMessage()" + " ,\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+			+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() + " with message:\"  + ex.getMessage()" + " ,\""+ ctClass.getName() +"\",\""+ name +"\",\""+ annotation.priority() +"\");\n"
 			+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 			+ "throw ex;"
 			+ "}"
@@ -134,12 +129,66 @@ public class DurationTransformer implements ClassFileTransformer {
 	private void updateWithIntAlerter(CtClass cc, CtMethod m, YellInt yellInt) {
 		try {
 			if (m.getReturnType().getName() == int.class.getName()) {
-				updateWithPrimitiveAlerter(cc, m, yellInt.times(), yellInt.message(), "" + yellInt.result(), int.class.getName());
+				String name = m.getName();
+				makeMethodPrivate(m);
+
+				if (yellInt.times() > 0) {
+					CtMethod newMethod = new CtMethod(m.getReturnType(), name, m.getParameterTypes(), cc);
+					newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
+
+					String conditionTBC;
+
+					if (yellInt.min() == 2147483647 && yellInt.max() == -2147483648) {
+						if (yellInt.resultEquals()) {
+							conditionTBC = "result == " + yellInt.result();
+						} else {
+							conditionTBC = "result != " + yellInt.result();
+						}
+					} else if (yellInt.min() != 2147483647 && yellInt.max() == -2147483648) {
+							conditionTBC = "result >= " + yellInt.min();
+					} else if (yellInt.max() != -2147483648 && yellInt.min() == 2147483647) {
+							conditionTBC = "result <= " + yellInt.max();
+					} else {
+							conditionTBC = yellInt.min() + " <= result  && result <= " + yellInt.max();
+					}
+				
+				if (yellInt.times() == 1) {
+					
+						
+					newMethod.setBody( " { int result =  this." + callWrappedMethod(m) 
+							+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
+							+ "if (" + conditionTBC + ") {"
+							+ "System.out.println(\"intercepted result char is: \" + result);\n"
+							+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ yellInt.message() +"\",\""+ cc.getName() +"\",\""+ name +"\",\"" +yellInt.priority().toString() +"\");\n"
+							+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
+							+ "} " 
+							+ " return result; } ");
+						
+					} else if (yellInt.times() > 1) {
+		                String queueName = "queueCharTimes";
+						createQueue(cc, queueName);
+				
+						newMethod.setBody( " { int result =  this." + callWrappedMethod(m)
+								+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
+								+ "if (" + conditionTBC + ") {"
+								+ "System.out.println(\"intercepted result char is: \" + result);\n"
+								+ "if (queueCharTimes.size() == "+ (yellInt.times() - 1) +") {"
+								+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ yellInt.message()+"\",\""+ cc.getName() +"\",\""+ name + "\",\"" +yellInt.priority().toString() +"\");\n"
+								+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
+								+ "for (int i = 0; i < "+(yellInt.times() - 1)+"; i++) {"
+								+ "queueCharTimes.poll();"
+								+ "}"	
+								+ "} else {"
+								+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+yellInt.message()+"\",\""+ cc.getName() +"\",\""+ name +"\",\"" +yellInt.priority().toString() +"\");\n"
+								+ "queueCharTimes.add(yellMessage);\n"
+								+ "} }"
+								+ " return result; } ");
+					}
+					cc.addMethod(newMethod);
+				}
 			}
-		} catch (NotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (CannotCompileException e) {
+			
+		} catch (NotFoundException | CannotCompileException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -149,7 +198,7 @@ public class DurationTransformer implements ClassFileTransformer {
 
 		try {
 			if (m.getReturnType().getName() == char.class.getName()) {
-				updateWithPrimitiveAlerter(cc, m, yellString.times(), yellString.message(), yellString.result(), String.class.getName());
+				updateWithPrimitiveAlerter(cc, m, yellString.times(), yellString.message(), yellString.result(), String.class.getName(), yellString.resultEquals(), yellString.priority());
 			}
 		} catch (NotFoundException e) {
 			// TODO Auto-generated catch block
@@ -164,7 +213,8 @@ public class DurationTransformer implements ClassFileTransformer {
 
 		try {
 			if (m.getReturnType().getName() == char.class.getName()) {
-				updateWithPrimitiveAlerter(cc, m, yellChar.times(), yellChar.message(), "'" + yellChar.result() + "'", char.class.getName());
+				updateWithPrimitiveAlerter(cc, m, yellChar.times(), yellChar.message(), "'" + yellChar.result() + "'",
+						char.class.getName(), yellChar.resultEquals(), yellChar.priority());
 			}
 		} catch (NotFoundException e) {
 			// TODO Auto-generated catch block
@@ -175,50 +225,56 @@ public class DurationTransformer implements ClassFileTransformer {
 		}
 	}
 	
-	private void updateWithPrimitiveAlerter(CtClass cc, CtMethod m, int times, String message, String result, String type) throws CannotCompileException, NotFoundException {
+	private void updateWithPrimitiveAlerter(CtClass cc, CtMethod m, int times, String message, String result, String type, Boolean equals, Priority priority)
+			throws CannotCompileException, NotFoundException {
 
-				String name = m.getName();
-				makeMethodPrivate(m);
+		String name = m.getName();
+		makeMethodPrivate(m);
 
-				if(times > 0){
-					CtMethod newMethod = new CtMethod(m.getReturnType(), name, m.getParameterTypes(), cc);
-					newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
+		if (times > 0) {
+			CtMethod newMethod = new CtMethod(m.getReturnType(), name, m.getParameterTypes(), cc);
+			newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
 
-				if (times == 1) {
-					
-					newMethod.setBody( " { " + type + " result =  this." + callWrappedMethod(m) 
-							+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
-							+ "if (result == " + result + ") {"
-							+ "System.out.println(\"intercepted result char is: \" + result);\n"
-							+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message +"\",\""+ cc.getName() +"\",\""+ name +"\");\n"
-							+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
-							+ "} " 
-							+ " return result; } ");
-						
-					} else if (times > 1) {
-                        String queueName = "queueCharTimes";
-						createQueue(cc, queueName);
-				
-						newMethod.setBody( " { " + type + " result =  this." + callWrappedMethod(m)
-								+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
-								+ "if (result == " + result + ") {"
-								+ "System.out.println(\"intercepted result char is: \" + result);\n"
-								+ "if (queueCharTimes.size() == "+ (times- 1) +") {"
-								+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message+"\",\""+ cc.getName() +"\",\""+ name +"\");\n"
-								+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
-								+ "for (int i = 0; i < "+(times- 1)+"; i++) {"
-								+ "queueCharTimes.poll();"
-								+ "}"	
-								+ "} else {"
-								+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+message+"\",\""+ cc.getName() +"\",\""+ name +"\");\n"
-								+ "queueCharTimes.add(yellMessage);\n"
-								+ "} }"
-								+ " return result; } ");
-					}
-					cc.addMethod(newMethod);
-				}
-			
+		String condition;
+		if (equals){
+			condition = " == ";
+		} else {
+			condition = " != ";
+		}
 		
+		if (times == 1) {
+			
+			newMethod.setBody( " { " + type + " result =  this." + callWrappedMethod(m) 
+					+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
+					+ "if (result" + condition + result + ") {"
+					+ "System.out.println(\"intercepted result char is: \" + result);\n"
+					+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message +"\",\""+ cc.getName() +"\",\""+ name +"\",\""+ priority +"\");\n"
+					+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
+					+ "} " 
+					+ " return result; } ");
+				
+			} else if (times > 1) {
+                String queueName = "queueCharTimes";
+				createQueue(cc, queueName);
+		
+				newMethod.setBody( " { " + type + " result =  this." + callWrappedMethod(m)
+						+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
+						+ "if (result " + condition  + result + ") {"
+						+ "System.out.println(\"intercepted result char is: \" + result);\n"
+						+ "if (queueCharTimes.size() == "+ (times- 1) +") {"
+						+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message+"\",\""+ cc.getName() +"\",\""+ name  +"\",\""+ priority +"\");\n"
+						+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
+						+ "for (int i = 0; i < "+(times- 1)+"; i++) {"
+						+ "queueCharTimes.poll();"
+						+ "}"	
+						+ "} else {"
+						+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+message+"\",\""+ cc.getName() +"\",\""+ name  +"\",\""+ priority +"\");\n"
+						+ "queueCharTimes.add(yellMessage);\n"
+						+ "} }"
+						+ " return result; } ");
+			}
+			cc.addMethod(newMethod);
+		}
 	}
 
 
@@ -232,7 +288,7 @@ public class DurationTransformer implements ClassFileTransformer {
 
 				String resultListF = Arrays.toString(annotation.result());
 				String result = resultListF.substring(1, resultListF.length() - 1);
-				updateWithArrayAlerter(ctClass, method, annotation.message(), result, int.class.getName());
+				updateWithArrayAlerter(ctClass, method, annotation.message(), result, int.class.getName(), annotation.in(), annotation.priority());
 			}
 		} catch (CannotCompileException e) {
 			// TODO Auto-generated catch block
@@ -247,14 +303,14 @@ public class DurationTransformer implements ClassFileTransformer {
 		System.out.println(" updateWithStringArrayAlerter -->");
 		try {
 			if (method.getReturnType().getName().equals(String.class.getName())) {
-				
+
 				String result = new String();
-				for (int i = 0; i < annotation.result().length; i++){
-					result += "\""+annotation.result()[i]+"\", ";
+				for (int i = 0; i < annotation.result().length; i++) {
+					result += "\"" + annotation.result()[i] + "\", ";
 				}
 				result = result.substring(0, result.length() - 2);
 				System.out.println(result);
-				updateWithArrayAlerter(ctClass, method, annotation.message(), result, String.class.getName());
+				updateWithArrayAlerter(ctClass, method, annotation.message(), result, String.class.getName(), annotation.in(), annotation.priority());
 			}
 		} catch (CannotCompileException e) {
 			// TODO Auto-generated catch block
@@ -265,22 +321,27 @@ public class DurationTransformer implements ClassFileTransformer {
 		}
 	}
 	
-	private void updateWithArrayAlerter(CtClass ctClass, CtMethod method, String message, String result, String type) throws CannotCompileException, NotFoundException {
+	private void updateWithArrayAlerter(CtClass ctClass, CtMethod method, String message, String result, String type, boolean in, Priority priority)
+			throws CannotCompileException, NotFoundException {
 		String name = method.getName();
 		makeMethodPrivate(method);
 
 		CtMethod newMethod = new CtMethod(method.getReturnType(), name, method.getParameterTypes(), ctClass);
 		newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
 
+		String condition = "";
+		if (!in){
+			condition = "!";
+		}
 		newMethod.setBody( " { "+type+" result =  this." + callWrappedMethod(method)
 				+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
 				+ type+"[] resultListAnnotation = new "+type+"[]{" +result+"};"
 				+ "boolean found = false;"
 				+ "for (int i = 0; i< resultListAnnotation.length ; i++) {\n"
 				+ "found |= resultListAnnotation[i] == result;}"
-				+ "if (found) {"
+				+ "if ("+ condition+"found) {"
 				+ "System.out.println(\"intercepted result  is: \" + result);\n"
-				+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+				+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ message +"\",\""+ ctClass.getName() +"\",\""+ name  +"\",\""+ priority +"\");\n"
 				+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 				+ "} " 
 				+ " return result; } ");
@@ -296,11 +357,16 @@ public class DurationTransformer implements ClassFileTransformer {
 			CtMethod newMethod = new CtMethod(method.getReturnType(), name, method.getParameterTypes(), ctClass);
 			newMethod.setModifiers(AccessFlag.clear(AccessFlag.setPublic(newMethod.getModifiers()), AccessFlag.ABSTRACT));
 
+			String condition = "";
+			if (!annotation.matches()){
+				condition = "!";
+			}
+			
 			newMethod.setBody( " { "+ method.getReturnType().getName()+ " result =  this." + callWrappedMethod(method)
 					+ "if (!com.yell.webservice.Service.getInstance().isRun()) return result;"
-					+ "if (result.matches(\""+annotation.regexPattern()+"\")) {"
+					+ "if ("+condition+"result.matches(\""+annotation.regexPattern()+"\")) {"
 					+ "System.out.println(\"intercepted result char is: \" + result);\n"
-					+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+					+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\",\""+ annotation.priority() +"\");\n"
 					+ "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 					+ "} " 
 					+ " return result; } ");
@@ -316,14 +382,14 @@ public class DurationTransformer implements ClassFileTransformer {
 	}
 	
 	private void updateWithCustomAlerter(CtClass ctClass, CtMethod method, YellCustom annotation) {
-			
+
 		CtClass returnTypeClass = null;
 		try {
 			returnTypeClass = method.getReturnType();
 		} catch (NotFoundException e) {
 			e.printStackTrace();
 		}
-		
+
 		if (returnTypeClass != null) {
 			if (!annotation.element().isEmpty()) {
 				String[] path = annotation.element().split("\\.");
@@ -347,7 +413,7 @@ public class DurationTransformer implements ClassFileTransformer {
 						}
 					}
 				}
-				
+
 				if (allAtribFound){
 					String name = method.getName();
 					makeMethodPrivate(method);
@@ -370,7 +436,7 @@ public class DurationTransformer implements ClassFileTransformer {
 							+ "  clazz = field.getType(); }"
 							+ "} catch (Exception e) { e.printStackTrace(); finishedCorrectly = false;}"
 							+ "if (finishedCorrectly && value.equals(\""+annotation.result()+"\")){"
-							+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\");\n"
+							+ "com.yell.webservice.YellMessage yellMessage = new com.yell.webservice.YellMessage(\""+ annotation.message() +"\",\""+ ctClass.getName() +"\",\""+ name +"\",\""+ annotation.priority() +"\");\n"
 					        + "com.yell.webservice.Service.getInstance().getMessages().add(yellMessage);\n" 
 							+ "}"
 							+ " return result; } ");
@@ -390,7 +456,7 @@ public class DurationTransformer implements ClassFileTransformer {
 			m.setName(m.getName() + "Wrapped");
 			m.setModifiers(AccessFlag.PRIVATE);
 		}
-		
+
 	}
 	
 	private void createQueue(CtClass cc, String name) {

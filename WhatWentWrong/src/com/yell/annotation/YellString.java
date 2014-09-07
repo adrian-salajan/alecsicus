@@ -13,7 +13,11 @@ public @interface YellString {
 
 	String result();
 	
+	boolean resultEquals() default true;
+	
 	int times() default 1;
 
 	int seconds() default 60;
+	
+	Priority priority() default Priority.MEDIUM;
 }

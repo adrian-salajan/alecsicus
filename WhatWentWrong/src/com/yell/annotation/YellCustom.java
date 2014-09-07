@@ -14,4 +14,8 @@ public @interface YellCustom {
 	String element();
 	
 	String result();
+	
+	boolean resultEquals() default true;
+	
+	Priority priority() default Priority.MEDIUM;
 }

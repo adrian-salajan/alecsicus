@@ -13,8 +13,12 @@ public @interface YellChar {
 
 	char result();
 	
+	boolean resultEquals() default true;
+	
 	int times() default 1;
 	
 	int seconds() default -1;
+	
+	Priority priority() default Priority.MEDIUM;
 	
 }

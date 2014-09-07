@@ -1,25 +1,39 @@
 package com.yell.webservice;
 
+import java.sql.Timestamp;
 import java.util.Date;
+
+import com.yell.annotation.Priority;
 
 public class YellMessage {
 
 	private String message;
-	private Date dateAndTime;
+	private Timestamp timestamp;
 	private String className;
 	private String methodName;
+	private Priority priority;
 
 	public YellMessage() {
 	}
 
 	public YellMessage(String message,  String className,
-			String methodName) {
+			String methodName, String priority) {
 		this.message = message;
-		//this.dateAndTime = date;
+		Date d = new Date();
+		long time = d.getTime();
+		timestamp = new Timestamp(time);
 		this.className = className;
 		this.methodName = methodName;
+		
+		if (Priority.HEIGH.toString().equals(priority)){
+			this.priority = Priority.HEIGH;
+		} else if (Priority.MEDIUM.toString().equals(priority)){
+			this.priority = Priority.MEDIUM;
+		} else {
+			this.priority = Priority.LOW;
+		}
 	}
-
+	
 	public String getMessage() {
 		return message;
 	}
@@ -28,12 +42,12 @@ public class YellMessage {
 		this.message = message;
 	}
 
-	public Date getDateAndTime() {
-		return dateAndTime;
+	public Timestamp getTimestamp() {
+		return timestamp;
 	}
 
-	public void setDateAndTime(Date dateAndTime) {
-		this.dateAndTime = dateAndTime;
+	public void setTimestamp(Timestamp timestamp) {
+		this.timestamp = timestamp;
 	}
 
 	public String getClassName() {
@@ -52,4 +66,13 @@ public class YellMessage {
 		this.methodName = methodName;
 	}
 
+	public Priority getPriority() {
+		return priority;
+	}
+
+	public void setPriority(Priority priority) {
+		this.priority = priority;
+	}
+
+	
 }

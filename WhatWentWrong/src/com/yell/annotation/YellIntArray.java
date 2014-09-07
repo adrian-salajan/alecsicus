@@ -12,4 +12,8 @@ public @interface YellIntArray {
 	String message();
 
 	int[] result();
+	
+	boolean in() default true;
+	
+	Priority priority() default Priority.MEDIUM;
 }

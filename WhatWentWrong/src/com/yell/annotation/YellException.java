@@ -13,4 +13,5 @@ public @interface YellException {
 	
 	Class<? extends Throwable> throwable();
 
+	Priority priority() default Priority.HEIGH;
 }

@@ -36,8 +36,7 @@ public class JsonServlet  extends HttpServlet {
 		} finally {
 			writer.close();
 		}
-			
-		
+
 	}
 
 }
