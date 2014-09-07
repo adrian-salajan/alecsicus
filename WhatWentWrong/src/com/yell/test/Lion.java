@@ -132,4 +132,12 @@ public class Lion {
 	public String pageURL(){
 		return "http://SimbaTheLion.com";
 	}
+	
+	@YellInt(message = "3 was returned !! ", result = 3)
+	public int runLion() throws InterruptedException {
+		String r = "Lion is going to run........";
+		Thread.sleep(2000L);
+		return 3;
+	}
+
 }

@@ -7,6 +7,12 @@ public class TestAnnotations {
 	public static void main(String[] args) {
 		Service.getInstance().setRun(true);
 		Lion l = new Lion();
+		try {
+			System.out.println(l.runLion());
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		System.out.println(l.getLionAge1(-1));
 		System.out.println(l.getLionAge2(2));
 		System.out.println(l.getLionAge3(-1));	

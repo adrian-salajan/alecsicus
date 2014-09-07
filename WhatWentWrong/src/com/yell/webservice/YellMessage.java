@@ -16,6 +16,10 @@ public class YellMessage {
 	public YellMessage() {
 	}
 
+	public YellMessage(String message){
+		this.message = message;
+	}
+	
 	public YellMessage(String message,  String className,
 			String methodName, String priority) {
 		this.message = message;

@@ -11,7 +11,7 @@ public class Service {
 	private boolean run = false;
 	
 	private Service(){
-		yellMessageList.add(new YellMessage("Yell service is OFF!{nosound}", null, null, null));
+		yellMessageList.add(new YellMessage("Yell service is OFF!"));
 	};
 	
 	public static Service getInstance(){
@@ -27,9 +27,9 @@ public class Service {
 	public void setRun(boolean run) {
 		this.run = run;
 		if (run) {
-			Service.getInstance().getMessages().add(new YellMessage("Enjoy the silence.", null, null, null));
+			Service.getInstance().getMessages().add(new YellMessage("Enjoy the silence."));
 		} else 
-			Service.getInstance().getMessages().add(new YellMessage("Yell service is OFF!", null, null, null));
+			Service.getInstance().getMessages().add(new YellMessage("Yell service is OFF!"));
 	}
 	
 	public boolean isRun() {
